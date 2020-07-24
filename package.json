@@ -1,7 +1,7 @@
 {
   "name": "parcel-plugin-elm-i18n",
   "version": "1.0.0",
-  "description": "A parcel plugin that adds the git description to the environment.",
+  "description": "A parcel plugin that generates Elm sources from i18n's JSONs.",
   "main": "index.js",
   "scripts": {
   },

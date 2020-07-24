@@ -1,5 +1,5 @@
 # parcel-plugin-elm-18n
-A parcel plugin that generates Elm sources from i18n's jsons.
+A parcel plugin that generates Elm sources from i18n's JSONs.
 
 ## Instructions
 
