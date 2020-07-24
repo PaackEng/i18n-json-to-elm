@@ -149,7 +149,7 @@ function asFieldName (s) {
     let head = s.charAt(0);
 
     if (head >= '0' && head <= '9')
-    return '_' + s;
+        return 'n' + s;
 
     return s.charAt(0).toLowerCase() + s.slice(1)
 }
