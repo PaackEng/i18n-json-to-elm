@@ -1,0 +1,24 @@
+{
+  "name": "parcel-plugin-elm-i18n",
+  "version": "1.0.0",
+  "description": "A parcel plugin that adds the git description to the environment.",
+  "main": "index.js",
+  "scripts": {
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pedrohlc/parcel-plugin-elm-i18n.git"
+  },
+  "keywords": [
+    "parcel",
+    "parcel-plugin",
+    "elm",
+    "i18n"
+  ],
+  "author": "PedroHLC",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/pedrohlc/parcel-plugin-elm-i18n/issues"
+  },
+  "homepage": "https://github.com/pedrohlc/parcel-plugin-elm-i18n#readme"
+}
