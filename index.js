@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-const sourcePath = path.join(__dirname, 'i18n');
-const destPath = path.join(__dirname, '.elm-i18n');
+const projectPath = '.';
+const sourcePath = path.join(projectPath, 'i18n');
+const destPath = path.join(projectPath, '.elm-i18n');
 const destNamespacePath = path.join(destPath, 'I18n');
 
 function main () {
