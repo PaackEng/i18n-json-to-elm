@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Generates Elm sources from i18n's JSONs.",
   "main": "lib/index.js",
+  "bin": {
+    "i18n-json-to-elm": "bin/i18n-json-to-elm.js"
+  },
   "scripts": {},
   "repository": {
     "type": "git",
