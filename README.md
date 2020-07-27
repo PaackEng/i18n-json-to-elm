@@ -19,11 +19,6 @@ Create a i18n.json with the following contents:
 
 ## Running
 
-
-### Parcel
-
-If you add the library to package.json, it gets automatically activated on everytime you run parcel.
-
 ### CLI
 
 Just run `npx i18n-json-to-elm`.
