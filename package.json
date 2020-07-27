@@ -1,24 +1,22 @@
 {
-  "name": "parcel-plugin-elm-i18n",
+  "name": "i18n-json-to-elm",
   "version": "1.0.0",
-  "description": "A parcel plugin that generates Elm sources from i18n's JSONs.",
+  "description": "Generates Elm sources from i18n's JSONs.",
   "main": "index.js",
   "scripts": {
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pedrohlc/parcel-plugin-elm-i18n.git"
+    "url": "git+https://github.com/pedrohlc/i18n-json-to-elm.git"
   },
   "keywords": [
-    "parcel",
-    "parcel-plugin",
     "elm",
     "i18n"
   ],
   "author": "PedroHLC",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/pedrohlc/parcel-plugin-elm-i18n/issues"
+    "url": "https://github.com/pedrohlc/i18n-json-to-elm/issues"
   },
-  "homepage": "https://github.com/pedrohlc/parcel-plugin-elm-i18n#readme"
+  "homepage": "https://github.com/pedrohlc/i18n-json-to-elm#readme"
 }
