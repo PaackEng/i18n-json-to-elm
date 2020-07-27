@@ -1,9 +1,18 @@
 const fs = require('fs');
 const path = require('path');
 const projectPath = '.';
-const sourcePath = path.join(projectPath, 'i18n');
-const destPath = path.join(projectPath, '.elm-i18n');
-const destNamespacePath = path.join(destPath, 'I18n');
+var sourcePath = path.join(projectPath, 'i18n');
+var destPath = path.join(projectPath, '.elm-i18n');
+var destNamespacePath = path.join(destPath, 'I18n');
+
+const configJson = path.join(projectPath, 'i18n.json')
+if (fs.existsSync(configJson)) {
+    const rawJSON = fs.readFileSync(configJson);
+    const json = JSON.parse(rawJSON);
+    sourcePath = path.join(projectPath, json.source);
+    destPath = path.join(projectPath, json.dest);
+    destNamespacePath = path.join(destPath, 'I18n');
+}
 
 function main () {
     if (!fs.existsSync(destPath))
@@ -116,11 +125,11 @@ function addValue(name, data, buffer) {
                 record.push(fieldKey + " = \"" + value + "\"");
             else
                 record.push(fieldKey
-                    + " = (\\{ "
+                    + " = \\{ "
                     + subEntries.map((v) => asFieldName(v)).join(", ")
                     + " } -> \""
                     + value.replace(subEntrySed, "\" ++ $1 ++ \"")
-                    + "\" )"
+                    + "\""
                 );
         } else if (value !== null && typeof value == 'object') {
             const newRecord = (name + capitalize(key))
