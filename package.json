@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "description": "Generates Elm sources from i18n's JSONs.",
   "main": "lib/index.js",
-  "scripts": {
-  },
+  "scripts": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pedrohlc/i18n-json-to-elm.git"
@@ -18,5 +17,8 @@
   "bugs": {
     "url": "https://github.com/pedrohlc/i18n-json-to-elm/issues"
   },
-  "homepage": "https://github.com/pedrohlc/i18n-json-to-elm#readme"
+  "homepage": "https://github.com/pedrohlc/i18n-json-to-elm#readme",
+  "dependencies": {
+    "elm-format": "^0.8.3"
+  }
 }
