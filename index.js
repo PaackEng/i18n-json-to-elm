@@ -1,8 +1,9 @@
 const fs = require('fs');
 const path = require('path');
+const json = require('./i18n.json') || null;
 const projectPath = '.';
-const sourcePath = path.join(projectPath, 'i18n');
-const destPath = path.join(projectPath, '.elm-i18n');
+const sourcePath = path.join(projectPath, json.source || 'i18n');
+const destPath = path.join(projectPath, json.dest || '.elm-i18n');
 const destNamespacePath = path.join(destPath, 'I18n');
 
 function main () {
@@ -116,11 +117,11 @@ function addValue(name, data, buffer) {
                 record.push(fieldKey + " = \"" + value + "\"");
             else
                 record.push(fieldKey
-                    + " = (\\{ "
+                    + " = \\{ "
                     + subEntries.map((v) => asFieldName(v)).join(", ")
                     + " } -> \""
                     + value.replace(subEntrySed, "\" ++ $1 ++ \"")
-                    + "\" )"
+                    + "\""
                 );
         } else if (value !== null && typeof value == 'object') {
             const newRecord = (name + capitalize(key))
