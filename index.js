@@ -1,10 +1,16 @@
 const fs = require('fs');
 const path = require('path');
-const json = require('./i18n.json') || null;
 const projectPath = '.';
-const sourcePath = path.join(projectPath, json.source || 'i18n');
-const destPath = path.join(projectPath, json.dest || '.elm-i18n');
-const destNamespacePath = path.join(destPath, 'I18n');
+var sourcePath = path.join(projectPath, 'i18n');
+var destPath = path.join(projectPath, '.elm-i18n');
+var destNamespacePath = path.join(destPath, 'I18n');
+
+if projectPath.exists('i18n.json', function(exists) {
+    const json = require(path(projectPath, 'i18n.json'));
+    sourcePath = path.join(projectPath, json.source);
+    destPath = path.join(projectPath, json.dest);
+    destNamespacePath = path.join(destPath, 'I18n');
+}
 
 function main () {
     if (!fs.existsSync(destPath))
