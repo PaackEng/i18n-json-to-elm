@@ -31,7 +31,7 @@ function main () {
             let rawJSON = fs.readFileSync(path.join(sourcePath, fileName));
             let parsedJSON = JSON.parse(rawJSON.toString().replace(/\\/g, '\\\\'));
             if (typed === null)
-                typed = buildType(parsedJSON);
+                typed = buildTypes(parsedJSON);
             buildLang(fileName, parsedJSON); 
         });
     });
@@ -44,12 +44,12 @@ function die (explanation) {
 
 module.exports = main
 
-function buildType (data) {
-    console.log('Bulding Type.elm');
-    const filePath = path.join(destNamespacePath, 'Type.elm');
+function buildTypes (data) {
+    console.log('Bulding Types.elm');
+    const filePath = path.join(destNamespacePath, 'Types.elm');
 
     let buffer = fs.createWriteStream(filePath);
-    buffer.write('module I18n.Type exposing (..)\n\n\n');
+    buffer.write('module I18n.Types exposing (..)\n\n\n');
 
     addRecord('', data, buffer);
 
@@ -102,7 +102,7 @@ function buildLang (sourceFileName, data) {
 
     let buffer = fs.createWriteStream(filePath);
     buffer.write('module I18n.'+moduleName+' exposing (..)\n\n\n'
-        + 'import I18n.Type exposing (..)\n\n\n'
+        + 'import I18n.Types exposing (..)\n\n\n'
     );
 
     addValue('', data, buffer);
