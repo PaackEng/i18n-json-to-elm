@@ -7,7 +7,8 @@ var destNamespacePath = path.join(destPath, 'I18n');
 
 const configJson = path.join(projectPath, 'i18n.json')
 if (fs.existsSync(configJson)) {
-    const json = require(configJson);
+    const rawJSON = fs.readFileSync(configJson);
+    const json = JSON.parse(rawJSON);
     sourcePath = path.join(projectPath, json.source);
     destPath = path.join(projectPath, json.dest);
     destNamespacePath = path.join(destPath, 'I18n');
