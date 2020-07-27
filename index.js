@@ -5,8 +5,8 @@ var sourcePath = path.join(projectPath, 'i18n');
 var destPath = path.join(projectPath, '.elm-i18n');
 var destNamespacePath = path.join(destPath, 'I18n');
 
-const configJson = path(projectPath, 'i18n.json')
-if (path.existsSync(configJson)) {
+const configJson = path.join(projectPath, 'i18n.json')
+if (fs.existsSync(configJson)) {
     const json = require(configJson);
     sourcePath = path.join(projectPath, json.source);
     destPath = path.join(projectPath, json.dest);
