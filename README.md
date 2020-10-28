@@ -13,7 +13,8 @@ Create a i18n.json with the following contents:
 ```json
 {
     "source": "i18n",
-    "dest": ".elm-i18n"
+    "dest": ".elm-i18n",
+    "namespace": "MyModuleName"
 }
 ```
 
