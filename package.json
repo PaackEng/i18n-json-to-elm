@@ -29,5 +29,9 @@
   },
   "scripts": {
     "prepare": "tsc"
-  }
+  },
+  "files": [
+    "bin/*.js",
+    "lib/**/*.js"
+  ]
 }
