@@ -1,18 +1,20 @@
-const fs = require('fs');
-const path = require('path');
-const child_process = require('child_process');
+import * as fs from 'fs';
+import * as path from 'path';
+import * as child_process from 'child_process';
+import { Writable } from 'stream';
 
 const projectPath = '.';
 var sourcePath = path.join(projectPath, 'i18n');
 var destPath = path.join(projectPath, '.elm-i18n');
 var moduleNamespace = 'I18n';
 var destNamespacePath = path.join(destPath, moduleNamespace);
-const configJson = path.join(projectPath, 'i18n.json')
+const configJson = path.join(projectPath, 'i18n.json');
+type Config = Partial<{ source: string, dest: string, namespace: string }>;
 
-function main () {
+export function main (): void {
     if (fs.existsSync(configJson)) {
         const rawJSON = fs.readFileSync(configJson);
-        const json = JSON.parse(rawJSON);
+        const json: Config = JSON.parse(rawJSON.toString());
         if (json.source != undefined)
             sourcePath = path.join(projectPath, json.source);
         if (json.dest != undefined)
@@ -32,7 +34,7 @@ function main () {
             return console.log('Unable to scan directory: ' + err);
         }
 
-        let typed = null;
+        let typed: boolean | null = null;
 
         files.forEach(function (fileName) {
             if(fileName.startsWith('.')) return;
@@ -47,14 +49,12 @@ function main () {
     });
 }
 
-function die (explanation) {
+function die (explanation: string): void {
     console.log(explanation);
     process.exit(1);
 }
 
-module.exports = main
-
-function buildTypes (data) {
+function buildTypes (data: JSON): boolean {
     console.log('Bulding Types.elm');
     const filePath = path.join(destNamespacePath, 'Types.elm');
 
@@ -63,7 +63,12 @@ function buildTypes (data) {
         { stdio: [ 'pipe', 1, 2 ] }
     );
 
-    let buffer = subprocess.stdin;
+    if (subprocess.stdin === null) {
+        die('Unable to pipe to elm-format!'); 
+        return false;
+    }
+
+    let buffer: Writable = subprocess.stdin;
     buffer.write(`module ${moduleNamespace}.Types exposing (..)\n\n\n`);
 
     addRecord('', data, buffer);
@@ -75,8 +80,8 @@ function buildTypes (data) {
 const subEntryRegex = /(?<={{)([^}]+)(?=}})/g;
 const subEntrySed = /{{([^}]+)}}/g;
 
-function addRecord(name, data, buffer) {
-    var record = [];
+function addRecord(name: string, data: JSON, buffer: Writable): void {
+    var record: string[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
         const fieldKey = asFieldName(key);
@@ -109,7 +114,7 @@ function addRecord(name, data, buffer) {
     buffer.write('\n    }\n\n\n');
 }
 
-function buildLang (sourceFileName, data) {
+function buildLang (sourceFileName: string, data: JSON): boolean {
     const moduleName = path.basename(sourceFileName, '.json');
     const fileName = moduleName+'.elm';
     console.log('Building ' + fileName);
@@ -120,7 +125,12 @@ function buildLang (sourceFileName, data) {
         { stdio: [ 'pipe', 1, 2 ] }
     );
 
-    let buffer = subprocess.stdin;
+    if (subprocess.stdin === null) {
+        die('Unable to pipe to elm-format!'); 
+        return false;
+    }
+    
+    let buffer: Writable = subprocess.stdin;
 
     buffer.write(`module ${moduleNamespace}.${moduleName} exposing (..)\n\n\nimport ${moduleNamespace}.Types exposing (..)\n\n\n`)
 
@@ -130,8 +140,8 @@ function buildLang (sourceFileName, data) {
     return true;
 }
 
-function addValue(name, data, buffer) {
-    var record = [];
+function addValue(name: string, data: JSON, buffer: Writable): void {
+    var record: string[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
         const fieldKey = asFieldName(key);
@@ -169,11 +179,11 @@ function addValue(name, data, buffer) {
     buffer.write('\n    }\n\n\n');
 }
 
-function capitalize (s) {
+function capitalize (s: string): string {
     return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function asFieldName (s) {
+function asFieldName (s: string): string {
     let head = s.charAt(0);
 
     if (head >= '0' && head <= '9')
