@@ -23,5 +23,8 @@
   "homepage": "https://github.com/pedrohlc/i18n-json-to-elm#readme",
   "dependencies": {
     "elm-format": "^0.8.3"
+  },
+  "devDependencies": {
+    "typescript": "^4.1.2"
   }
 }
