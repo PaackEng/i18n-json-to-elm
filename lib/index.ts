@@ -12,7 +12,7 @@ const configJson = path.join(projectPath, 'i18n.json')
 export function main () {
     if (fs.existsSync(configJson)) {
         const rawJSON = fs.readFileSync(configJson);
-        const json = JSON.parse(rawJSON);
+        const json = JSON.parse(rawJSON.toString());
         if (json.source != undefined)
             sourcePath = path.join(projectPath, json.source);
         if (json.dest != undefined)
