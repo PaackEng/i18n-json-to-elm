@@ -6,7 +6,6 @@
   "bin": {
     "i18n-json-to-elm": "bin/i18n-json-to-elm.js"
   },
-  "scripts": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pedrohlc/i18n-json-to-elm.git"
