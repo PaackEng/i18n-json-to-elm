@@ -52,8 +52,6 @@ function die (explanation) {
     process.exit(1);
 }
 
-module.exports = main
-
 function buildTypes (data) {
     console.log('Bulding Types.elm');
     const filePath = path.join(destNamespacePath, 'Types.elm');

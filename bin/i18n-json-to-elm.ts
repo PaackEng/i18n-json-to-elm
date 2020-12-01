@@ -1,4 +1,4 @@
-#!/usr/bin/env npx tsc
-import { main } from '../lib/index'
+#!/usr/bin/env node
+import { main } from '../lib/index';
 
 main();
