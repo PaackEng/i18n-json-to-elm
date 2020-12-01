@@ -8,12 +8,13 @@ var sourcePath = path.join(projectPath, 'i18n');
 var destPath = path.join(projectPath, '.elm-i18n');
 var moduleNamespace = 'I18n';
 var destNamespacePath = path.join(destPath, moduleNamespace);
-const configJson = path.join(projectPath, 'i18n.json')
+const configJson = path.join(projectPath, 'i18n.json');
+type Config = Partial<{ source: string, dest: string, namespace: string }>;
 
-export function main () {
+export function main (): void {
     if (fs.existsSync(configJson)) {
         const rawJSON = fs.readFileSync(configJson);
-        const json = JSON.parse(rawJSON.toString());
+        const json: Config = JSON.parse(rawJSON.toString());
         if (json.source != undefined)
             sourcePath = path.join(projectPath, json.source);
         if (json.dest != undefined)
@@ -48,12 +49,12 @@ export function main () {
     });
 }
 
-function die (explanation: string) {
+function die (explanation: string): void {
     console.log(explanation);
     process.exit(1);
 }
 
-function buildTypes (data: JSON) {
+function buildTypes (data: JSON): boolean {
     console.log('Bulding Types.elm');
     const filePath = path.join(destNamespacePath, 'Types.elm');
 
@@ -67,7 +68,7 @@ function buildTypes (data: JSON) {
         return false;
     }
 
-    let buffer : Writable = subprocess.stdin;
+    let buffer: Writable = subprocess.stdin;
     buffer.write(`module ${moduleNamespace}.Types exposing (..)\n\n\n`);
 
     addRecord('', data, buffer);
@@ -79,7 +80,7 @@ function buildTypes (data: JSON) {
 const subEntryRegex = /(?<={{)([^}]+)(?=}})/g;
 const subEntrySed = /{{([^}]+)}}/g;
 
-function addRecord(name: string, data: JSON, buffer: Writable) {
+function addRecord(name: string, data: JSON, buffer: Writable): void {
     var record: string[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
@@ -113,7 +114,7 @@ function addRecord(name: string, data: JSON, buffer: Writable) {
     buffer.write('\n    }\n\n\n');
 }
 
-function buildLang (sourceFileName: string, data: JSON) {
+function buildLang (sourceFileName: string, data: JSON): boolean {
     const moduleName = path.basename(sourceFileName, '.json');
     const fileName = moduleName+'.elm';
     console.log('Building ' + fileName);
@@ -129,7 +130,7 @@ function buildLang (sourceFileName: string, data: JSON) {
         return false;
     }
     
-    let buffer : Writable = subprocess.stdin;
+    let buffer: Writable = subprocess.stdin;
 
     buffer.write(`module ${moduleNamespace}.${moduleName} exposing (..)\n\n\nimport ${moduleNamespace}.Types exposing (..)\n\n\n`)
 
@@ -139,7 +140,7 @@ function buildLang (sourceFileName: string, data: JSON) {
     return true;
 }
 
-function addValue(name: string, data: JSON, buffer: Writable) {
+function addValue(name: string, data: JSON, buffer: Writable): void {
     var record: string[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
@@ -178,11 +179,11 @@ function addValue(name: string, data: JSON, buffer: Writable) {
     buffer.write('\n    }\n\n\n');
 }
 
-function capitalize (s: string) {
+function capitalize (s: string): string {
     return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function asFieldName (s: string) {
+function asFieldName (s: string): string {
     let head = s.charAt(0);
 
     if (head >= '0' && head <= '9')
