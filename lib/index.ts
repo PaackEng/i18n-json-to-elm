@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as child_process from 'child_process';
+import { Writable } from 'stream';
 
 const projectPath = '.';
 var sourcePath = path.join(projectPath, 'i18n');
@@ -32,7 +33,7 @@ export function main () {
             return console.log('Unable to scan directory: ' + err);
         }
 
-        let typed = null;
+        let typed: boolean | null = null;
 
         files.forEach(function (fileName) {
             if(fileName.startsWith('.')) return;
@@ -47,12 +48,12 @@ export function main () {
     });
 }
 
-function die (explanation) {
+function die (explanation: string) {
     console.log(explanation);
     process.exit(1);
 }
 
-function buildTypes (data) {
+function buildTypes (data: JSON) {
     console.log('Bulding Types.elm');
     const filePath = path.join(destNamespacePath, 'Types.elm');
 
@@ -61,7 +62,12 @@ function buildTypes (data) {
         { stdio: [ 'pipe', 1, 2 ] }
     );
 
-    let buffer = subprocess.stdin;
+    if (subprocess.stdin === null) {
+        die('Unable to pipe to elm-format!'); 
+        return false;
+    }
+
+    let buffer : Writable = subprocess.stdin;
     buffer.write(`module ${moduleNamespace}.Types exposing (..)\n\n\n`);
 
     addRecord('', data, buffer);
@@ -73,8 +79,8 @@ function buildTypes (data) {
 const subEntryRegex = /(?<={{)([^}]+)(?=}})/g;
 const subEntrySed = /{{([^}]+)}}/g;
 
-function addRecord(name, data, buffer) {
-    var record = [];
+function addRecord(name: string, data: JSON, buffer: Writable) {
+    var record: string[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
         const fieldKey = asFieldName(key);
@@ -107,7 +113,7 @@ function addRecord(name, data, buffer) {
     buffer.write('\n    }\n\n\n');
 }
 
-function buildLang (sourceFileName, data) {
+function buildLang (sourceFileName: string, data: JSON) {
     const moduleName = path.basename(sourceFileName, '.json');
     const fileName = moduleName+'.elm';
     console.log('Building ' + fileName);
@@ -118,7 +124,12 @@ function buildLang (sourceFileName, data) {
         { stdio: [ 'pipe', 1, 2 ] }
     );
 
-    let buffer = subprocess.stdin;
+    if (subprocess.stdin === null) {
+        die('Unable to pipe to elm-format!'); 
+        return false;
+    }
+    
+    let buffer : Writable = subprocess.stdin;
 
     buffer.write(`module ${moduleNamespace}.${moduleName} exposing (..)\n\n\nimport ${moduleNamespace}.Types exposing (..)\n\n\n`)
 
@@ -128,8 +139,8 @@ function buildLang (sourceFileName, data) {
     return true;
 }
 
-function addValue(name, data, buffer) {
-    var record = [];
+function addValue(name: string, data: JSON, buffer: Writable) {
+    var record: string[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
         const fieldKey = asFieldName(key);
@@ -167,11 +178,11 @@ function addValue(name, data, buffer) {
     buffer.write('\n    }\n\n\n');
 }
 
-function capitalize (s) {
+function capitalize (s: string) {
     return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function asFieldName (s) {
+function asFieldName (s: string) {
     let head = s.charAt(0);
 
     if (head >= '0' && head <= '9')
