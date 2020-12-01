@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const child_process = require('child_process');
+import * as fs from 'fs';
+import * as path from 'path';
+import * as child_process from 'child_process';
 
 const projectPath = '.';
 var sourcePath = path.join(projectPath, 'i18n');
@@ -9,7 +9,7 @@ var moduleNamespace = 'I18n';
 var destNamespacePath = path.join(destPath, moduleNamespace);
 const configJson = path.join(projectPath, 'i18n.json')
 
-function main () {
+export function main () {
     if (fs.existsSync(configJson)) {
         const rawJSON = fs.readFileSync(configJson);
         const json = JSON.parse(rawJSON);

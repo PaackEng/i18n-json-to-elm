@@ -2,3 +2,4 @@
 i18n
 i18n.json
 node_modules/
+**/*.js

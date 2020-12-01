@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env npx tsc
+import { main } from '../lib/index'
 
-const main = require('../lib/index.js');
 main();
