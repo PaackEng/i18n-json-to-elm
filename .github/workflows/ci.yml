@@ -37,7 +37,7 @@ jobs:
        run: yarn install
 
      - name: Run linter
-       run: npx eslint bin/*.ts lib/*.ts
+       run: npm run lint
 
   build:
    runs-on: ubuntu-latest
