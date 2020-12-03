@@ -4,10 +4,10 @@ import * as child_process from 'child_process';
 import { Writable } from 'stream';
 
 const projectPath = '.';
-var sourcePath = path.join(projectPath, 'i18n');
-var destPath = path.join(projectPath, '.elm-i18n');
-var moduleNamespace = 'I18n';
-var destNamespacePath = path.join(destPath, moduleNamespace);
+let sourcePath = path.join(projectPath, 'i18n');
+let destPath = path.join(projectPath, '.elm-i18n');
+let moduleNamespace = 'I18n';
+let destNamespacePath = path.join(destPath, moduleNamespace);
 const configJson = path.join(projectPath, 'i18n.json');
 type Config = Partial<{ source: string, dest: string, namespace: string }>;
 
@@ -40,8 +40,8 @@ export function main (): void {
             if(fileName.startsWith('.')) return;
             if(!fileName.endsWith('.json')) return;
 
-            let rawJSON = fs.readFileSync(path.join(sourcePath, fileName));
-            let parsedJSON = JSON.parse(rawJSON.toString().replace(/\\/g, '\\\\'));
+            const rawJSON = fs.readFileSync(path.join(sourcePath, fileName));
+            const parsedJSON = JSON.parse(rawJSON.toString().replace(/\\/g, '\\\\'));
             if (typed === null)
                 typed = buildTypes(parsedJSON);
             buildLang(fileName, parsedJSON);
@@ -68,7 +68,7 @@ function buildTypes (data: JSON): boolean {
         return false;
     }
 
-    let buffer: Writable = subprocess.stdin;
+    const buffer: Writable = subprocess.stdin;
     buffer.write(`module ${moduleNamespace}.Types exposing (..)\n\n\n`);
 
     addRecord('', data, buffer);
@@ -81,7 +81,7 @@ const subEntryRegex = /(?<={{)([^}]+)(?=}})/g;
 const subEntrySed = /{{([^}]+)}}/g;
 
 function addRecord(name: string, data: JSON, buffer: Writable): void {
-    var record: string[] = [];
+    const record: string[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
         const fieldKey = asFieldName(key);
@@ -130,7 +130,7 @@ function buildLang (sourceFileName: string, data: JSON): boolean {
         return false;
     }
     
-    let buffer: Writable = subprocess.stdin;
+    const buffer: Writable = subprocess.stdin;
 
     buffer.write(`module ${moduleNamespace}.${moduleName} exposing (..)\n\n\nimport ${moduleNamespace}.Types exposing (..)\n\n\n`)
 
@@ -141,7 +141,7 @@ function buildLang (sourceFileName: string, data: JSON): boolean {
 }
 
 function addValue(name: string, data: JSON, buffer: Writable): void {
-    var record: string[] = [];
+    const record: string[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
         const fieldKey = asFieldName(key);
@@ -171,7 +171,7 @@ function addValue(name: string, data: JSON, buffer: Writable): void {
     if (name == '')
         name = 'Root';
 
-    let fieldName = asFieldName(name);
+    const fieldName = asFieldName(name);
 
     buffer.write(fieldName + ' : ' + name + '\n'
         + fieldName + ' =\n    { ');
@@ -184,7 +184,7 @@ function capitalize (s: string): string {
 }
 
 function asFieldName (s: string): string {
-    let head = s.charAt(0);
+    const head = s.charAt(0);
 
     if (head >= '0' && head <= '9')
         return 'n' + s;
