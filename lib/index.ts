@@ -74,7 +74,7 @@ function buildHelpers (data: JSON): boolean {
         +`import ${moduleNamespace}.Types as Types\n`
         );
 
-    addRecord('', '', data, typesBuffer, decodersBuffer, mockBuffer);
+    addHelper({ name: '', context: '', data, typesBuffer, decodersBuffer, mockBuffer});
 
     typesBuffer.end();
     decodersBuffer.end();
@@ -85,7 +85,18 @@ function buildHelpers (data: JSON): boolean {
 const subEntryRegex = /(?<={{)([^}]+)(?=}})/g;
 const subEntrySed = /{{([^}]+)}}/g;
 
-function addRecord(name: string, context: string, data: JSON, typesBuffer: Writable, decodersBuffer: Writable, mockBuffer: Writable): void {
+type AddHelperAccumulator = {
+    name: string,
+    context: string,
+    data: JSON,
+    typesBuffer: Writable,
+    decodersBuffer: Writable,
+    mockBuffer: Writable
+};
+
+function addHelper(accumulator: AddHelperAccumulator): void {
+    const {typesBuffer, decodersBuffer, mockBuffer} = accumulator;
+    let {name, context, data} = accumulator;
     const record: string[] = [];
     const decoder: string[] = [];
     const mock: string[] = [];
@@ -124,7 +135,7 @@ function addRecord(name: string, context: string, data: JSON, typesBuffer: Writa
             record.push(fieldKey + " : " + newRecord);
             decoder.push(`i18nRecord "${key}" (${newFunction} translator) fallback.${asFieldName(key)}`);
             mock.push(`${fieldKey} = ${newFunction}`);
-            addRecord(newRecord, newContext, value, typesBuffer, decodersBuffer, mockBuffer);
+            addHelper({name: newRecord, context: newContext, data: value, typesBuffer, decodersBuffer, mockBuffer});
         } else
             die('Invalid JSON');
     });
@@ -166,13 +177,21 @@ function buildLang (sourceFileName: string, data: JSON): boolean {
     buffer.write(`module ${moduleNamespace}.${moduleName} exposing (..)\n`
         +`import ${moduleNamespace}.Types exposing (..)\n`)
 
-    addValue('', data, buffer);
+    addValue({name: '', data, buffer});
 
     buffer.end();
     return true;
 }
 
-function addValue(name: string, data: JSON, buffer: Writable): void {
+type AddValueAccumulator = {
+    name: string,
+    data: JSON,
+    buffer: Writable
+};
+
+function addValue(accumulator: AddValueAccumulator): void {
+    const buffer = accumulator.buffer;
+    let {name, data} = accumulator;
     const record: string[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
@@ -195,7 +214,7 @@ function addValue(name: string, data: JSON, buffer: Writable): void {
         } else if (value !== null && typeof value == 'object') {
             const newRecord = (name + capitalize(key))
             record.push(fieldKey + " = " + asFieldName(newRecord));
-            addValue(newRecord, value, buffer);
+            addValue({name: newRecord, data: value, buffer});
         } else
             die('Invalid JSON');
     });
