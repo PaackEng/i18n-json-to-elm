@@ -58,23 +58,38 @@ function die (explanation: string): never {
 }
 
 function buildTypes (data: JSON): boolean {
-    console.log('Bulding Types.elm');
-    const filePath = path.join(destNamespacePath, 'Types.elm');
-    const buffer = pipeToElmFormat(filePath);
+    console.log('Bulding Types.elm / Decoders.elm');
+    const typesBuffer = pipeToElmFormat(path.join(destNamespacePath, 'Types.elm'));
+    const decodersBuffer = pipeToElmFormat(path.join(destNamespacePath, 'Decoders.elm'));
 
-    buffer.write(`module ${moduleNamespace}.Types exposing (..)\n\n\n`);
+    typesBuffer.write(`module ${moduleNamespace}.Types exposing (..)\n`);
+    decodersBuffer.write(`module ${moduleNamespace}.Decoders exposing (..)\n`
+        +`import ${moduleNamespace}.Types as Types\n`
+        +'import Json.Decode as Decode exposing (Decoder)\n'
+        +'\n'
+        +'i18nField : Decoder (String -> a) -> Decoder a\n'
+        +'i18nField context key =\n'
+        +'    \n'
+        +'    [ Decode.field key Decode.string\n'
+        +'    , Decode.succeed <| context + "." + key\n'
+        +'    ]\n'
+        +'    |> Decode.oneOf\n'
+        +'    |> Decode.map\n'
+        );
 
-    addRecord('', data, buffer);
+    addRecord('', '', data, typesBuffer, decodersBuffer);
 
-    buffer.end();
+    typesBuffer.end();
+    decodersBuffer.end();
     return true;
 }
 
 const subEntryRegex = /(?<={{)([^}]+)(?=}})/g;
 const subEntrySed = /{{([^}]+)}}/g;
 
-function addRecord(name: string, data: JSON, buffer: Writable): void {
+function addRecord(name: string, context: string, data: JSON, typesBuffer: Writable, decodersBuffer: Writable): void {
     const record: string[] = [];
+    const decoder: string[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
         const fieldKey = asFieldName(key);
@@ -83,18 +98,30 @@ function addRecord(name: string, data: JSON, buffer: Writable): void {
             die('Unexpected array in JSON');
         } else if (typeof value == 'string') {
             const subEntries = value.match(subEntryRegex);
-            if (subEntries == null)
+            if (subEntries == null) {
                 record.push(fieldKey + " : String");
-            else
-                record.push(fieldKey
+                decoder.push(`i18nField "${context}" "${key}"`);
+            } else {
+                record.push(
+                    fieldKey
                     + " : { "
                     + subEntries.map((v) => asFieldName(v) + ' : String').join(", ")
                     + " } -> String"
                 );
+                decoder.push(
+                    'Decode.map (\\value '
+                    + subEntries.map((v) => asFieldName(v)).join(' ')
+                    + ' -> value |> '
+                    + subEntries.map((v) => `String.replace "{{${v}}}" ${asFieldName(v)}`).join(' |> ')
+                    + ') Decode.string'
+                );
+            }
         } else if (value !== null && typeof value == 'object') {
-            const newRecord = (name + capitalize(key))
+            const newRecord = (name + capitalize(key));
+            const newContext = (context == '' ? key : context + '.' + key);
             record.push(fieldKey + " : " + newRecord);
-            addRecord(newRecord, value, buffer);
+            decoder.push(`Decode.map (Decode.field "${key}" ${fieldKey})`);
+            addRecord(newRecord, newContext, value, typesBuffer, decodersBuffer);
         } else
             die('Invalid JSON');
     });
@@ -102,9 +129,23 @@ function addRecord(name: string, data: JSON, buffer: Writable): void {
     if (name == '')
         name = 'Root';
 
-    buffer.write('type alias ' + name + ' =\n    { ');
-    buffer.write(record.join('\n    , '));
-    buffer.write('\n    }\n\n\n');
+    typesBuffer.write('type alias ' + name + ' =\n    { ');
+    typesBuffer.write(record.join('\n    , '));
+    typesBuffer.write('\n    }\n\n\n');
+
+    if (context == '')
+        context = 'root';
+    else
+        context = asFieldName(name);
+
+    decodersBuffer.write(`${context} : Decoder Types.${name}\n`
+        +`${context} =\n`
+        +`    Decode.succeed Types.${name}\n`);
+    if (decoder.length > 0) {
+        decodersBuffer.write('\n    |> ');
+        decodersBuffer.write(decoder.join('\n    |> '));
+    }
+    decodersBuffer.write('\n');
 }
 
 function buildLang (sourceFileName: string, data: JSON): boolean {
@@ -114,7 +155,8 @@ function buildLang (sourceFileName: string, data: JSON): boolean {
     const filePath = path.join(destNamespacePath, fileName);
     const buffer = pipeToElmFormat(filePath);
 
-    buffer.write(`module ${moduleNamespace}.${moduleName} exposing (..)\n\n\nimport ${moduleNamespace}.Types exposing (..)\n\n\n`)
+    buffer.write(`module ${moduleNamespace}.${moduleName} exposing (..)\n`
+        +`import ${moduleNamespace}.Types exposing (..)\n`)
 
     addValue('', data, buffer);
 
@@ -155,10 +197,9 @@ function addValue(name: string, data: JSON, buffer: Writable): void {
 
     const fieldName = asFieldName(name);
 
-    buffer.write(fieldName + ' : ' + name + '\n'
-        + fieldName + ' =\n    { ');
+    buffer.write(`${fieldName} : ${name}\n${fieldName} =\n    {\n`);
     buffer.write(record.join('\n    , '));
-    buffer.write('\n    }\n\n\n');
+    buffer.write('\n    }\n');
 }
 
 function pipeToElmFormat(filePath: string): Writable | never {
