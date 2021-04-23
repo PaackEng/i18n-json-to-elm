@@ -38,7 +38,10 @@ export function main (): void {
 
         files.forEach(function (fileName) {
             if(fileName.startsWith('.')) return;
-            if(!fileName.endsWith('.json')) return;
+            if(!fileName.endsWith('.json')) {
+                console.log('Ignoring "' + fileName + '".');
+                return;
+            }
 
             const rawJSON = fs.readFileSync(path.join(sourcePath, fileName));
             const parsedJSON = JSON.parse(rawJSON.toString().replace(/\\/g, '\\\\'));
@@ -49,26 +52,16 @@ export function main (): void {
     });
 }
 
-function die (explanation: string): void {
+function die (explanation: string): never {
     console.log(explanation);
-    process.exit(1);
+    return process.exit(1);
 }
 
 function buildTypes (data: JSON): boolean {
     console.log('Bulding Types.elm');
     const filePath = path.join(destNamespacePath, 'Types.elm');
+    const buffer = pipeToElmFormat(filePath);
 
-    const subprocess = child_process.spawn('elm-format',
-        ['--stdin', '--output', filePath],
-        { stdio: [ 'pipe', 1, 2 ] }
-    );
-
-    if (subprocess.stdin === null) {
-        die('Unable to pipe to elm-format!'); 
-        return false;
-    }
-
-    const buffer: Writable = subprocess.stdin;
     buffer.write(`module ${moduleNamespace}.Types exposing (..)\n\n\n`);
 
     addRecord('', data, buffer);
@@ -115,22 +108,11 @@ function addRecord(name: string, data: JSON, buffer: Writable): void {
 }
 
 function buildLang (sourceFileName: string, data: JSON): boolean {
-    const moduleName = path.basename(sourceFileName, '.json');
+    const moduleName = capitalize(path.basename(sourceFileName, '.json'));
     const fileName = moduleName+'.elm';
     console.log('Building ' + fileName);
     const filePath = path.join(destNamespacePath, fileName);
-
-    const subprocess = child_process.spawn('elm-format',
-        ['--stdin', '--output', filePath],
-        { stdio: [ 'pipe', 1, 2 ] }
-    );
-
-    if (subprocess.stdin === null) {
-        die('Unable to pipe to elm-format!'); 
-        return false;
-    }
-    
-    const buffer: Writable = subprocess.stdin;
+    const buffer = pipeToElmFormat(filePath);
 
     buffer.write(`module ${moduleNamespace}.${moduleName} exposing (..)\n\n\nimport ${moduleNamespace}.Types exposing (..)\n\n\n`)
 
@@ -177,6 +159,19 @@ function addValue(name: string, data: JSON, buffer: Writable): void {
         + fieldName + ' =\n    { ');
     buffer.write(record.join('\n    , '));
     buffer.write('\n    }\n\n\n');
+}
+
+function pipeToElmFormat(filePath: string): Writable | never {
+    const subprocess = child_process.spawn('elm-format',
+        ['--stdin', '--output', filePath],
+        { stdio: [ 'pipe', 1, 2 ] }
+    );
+
+    if (subprocess.stdin === null) {
+        return die('Unable to pipe to elm-format!');
+    }
+
+    return subprocess.stdin;
 }
 
 function capitalize (s: string): string {
