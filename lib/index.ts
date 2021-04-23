@@ -95,8 +95,9 @@ type AddHelperAccumulator = {
 };
 
 function addHelper(accumulator: AddHelperAccumulator): void {
-    const {typesBuffer, decodersBuffer, mockBuffer} = accumulator;
-    let {name, context, data} = accumulator;
+    const {data, typesBuffer, decodersBuffer, mockBuffer} = accumulator;
+    let {name, context} = accumulator;
+
     const record: string[] = [];
     const decoder: string[] = [];
     const mock: string[] = [];
@@ -190,8 +191,9 @@ type AddValueAccumulator = {
 };
 
 function addValue(accumulator: AddValueAccumulator): void {
-    const buffer = accumulator.buffer;
-    let {name, data} = accumulator;
+    const {buffer, data} = accumulator;
+    let {name} = accumulator;
+
     const record: string[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
