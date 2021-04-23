@@ -109,11 +109,11 @@ function addRecord(name: string, context: string, data: JSON, typesBuffer: Writa
                     + " } -> String"
                 );
                 decoder.push(
-                    'Decode.map (\\value '
-                    + subEntries.map((v) => asFieldName(v)).join(' ')
-                    + ' -> value |> '
-                    + subEntries.map((v) => `String.replace "{{${v}}}" ${asFieldName(v)}`).join(' |> ')
-                    + ') Decode.string'
+                    'Decode.oneOf [ Decode.map (\\value {'
+                    + subEntries.map((v) => asFieldName(v)).join(', ')
+                    + '} -> value |>\n'
+                    + subEntries.map((v) => `String.replace "{{${v}}}" ${asFieldName(v)}`).join(' |>\n')
+                    + `) (Decode.field "${key}" Decode.string),\nDecode.succeed (\\value _ -> "${context}.${key}") ]`
                 );
             }
         } else if (value !== null && typeof value == 'object') {
