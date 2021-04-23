@@ -38,70 +38,105 @@ export function main (): void {
 
         files.forEach(function (fileName) {
             if(fileName.startsWith('.')) return;
-            if(!fileName.endsWith('.json')) return;
+            if(!fileName.endsWith('.json')) {
+                console.log('Ignoring "' + fileName + '".');
+                return;
+            }
 
             const rawJSON = fs.readFileSync(path.join(sourcePath, fileName));
             const parsedJSON = JSON.parse(rawJSON.toString().replace(/\\/g, '\\\\'));
             if (typed === null)
-                typed = buildTypes(parsedJSON);
+                typed = buildHelpers(parsedJSON);
             buildLang(fileName, parsedJSON);
         });
     });
 }
 
-function die (explanation: string): void {
+function die (explanation: string): never {
     console.log(explanation);
-    process.exit(1);
+    return process.exit(1);
 }
 
-function buildTypes (data: JSON): boolean {
-    console.log('Bulding Types.elm');
-    const filePath = path.join(destNamespacePath, 'Types.elm');
+function buildHelpers (data: JSON): boolean {
+    console.log('Bulding Types.elm / Decoders.elm / MockLanguage.elm');
+    const typesBuffer = pipeToElmFormat(path.join(destNamespacePath, 'Types.elm'));
+    const decodersBuffer = pipeToElmFormat(path.join(destNamespacePath, 'Decoders.elm'));
+    const mockBuffer = pipeToElmFormat(path.join(destNamespacePath, 'MockLanguage.elm'));
 
-    const subprocess = child_process.spawn('elm-format',
-        ['--stdin', '--output', filePath],
-        { stdio: [ 'pipe', 1, 2 ] }
-    );
+    typesBuffer.write(`module ${moduleNamespace}.Types exposing (..)\n`);
+    decodersBuffer.write(`module ${moduleNamespace}.Decoders exposing (..)\n`
+        +`import ${moduleNamespace}.Types as Types\n`
+        +'import Json.Decode as Decode exposing (Decoder)\n'
+        +'\n'
+        +decodersHelpers
+        );
+    mockBuffer.write(`module ${moduleNamespace}.MockLanguage exposing (..)\n`
+        +`import ${moduleNamespace}.Types as Types\n`
+        );
 
-    if (subprocess.stdin === null) {
-        die('Unable to pipe to elm-format!'); 
-        return false;
-    }
+    addHelper({ name: '', context: '', data, typesBuffer, decodersBuffer, mockBuffer});
 
-    const buffer: Writable = subprocess.stdin;
-    buffer.write(`module ${moduleNamespace}.Types exposing (..)\n\n\n`);
-
-    addRecord('', data, buffer);
-
-    buffer.end();
+    typesBuffer.end();
+    decodersBuffer.end();
+    mockBuffer.end();
     return true;
 }
 
 const subEntryRegex = /(?<={{)([^}]+)(?=}})/g;
 const subEntrySed = /{{([^}]+)}}/g;
 
-function addRecord(name: string, data: JSON, buffer: Writable): void {
+type AddHelperAccumulator = {
+    name: string,
+    context: string,
+    data: JSON,
+    typesBuffer: Writable,
+    decodersBuffer: Writable,
+    mockBuffer: Writable
+};
+
+function addHelper(accumulator: AddHelperAccumulator): void {
+    const {data, typesBuffer, decodersBuffer, mockBuffer} = accumulator;
+    let {name, context} = accumulator;
+
     const record: string[] = [];
+    const decoder: string[] = [];
+    const mock: string[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
         const fieldKey = asFieldName(key);
+        const newContext = (context == '' ? key : context + '.' + key);
 
         if (Array.isArray(value)) {
             die('Unexpected array in JSON');
         } else if (typeof value == 'string') {
             const subEntries = value.match(subEntryRegex);
-            if (subEntries == null)
+            if (subEntries == null) {
                 record.push(fieldKey + " : String");
-            else
-                record.push(fieldKey
+                decoder.push(`i18nField "${key}" fallback.${fieldKey}`);
+                mock.push(`${fieldKey} = "${newContext}"`);
+            } else {
+                record.push(
+                    fieldKey
                     + " : { "
                     + subEntries.map((v) => asFieldName(v) + ' : String').join(", ")
                     + " } -> String"
                 );
+                decoder.push(
+                    `i18nReplaceable "${key}" (\\value {`
+                    + subEntries.map((v) => asFieldName(v)).join(', ')
+                    + '} -> translator ['
+                    + subEntries.map((v) => `( "${v}", ${asFieldName(v)} )`).join('\n , ')
+                    + `] value ) fallback.${fieldKey}`
+                );
+                mock.push(`${fieldKey} = always "${newContext}"`);
+            }
         } else if (value !== null && typeof value == 'object') {
-            const newRecord = (name + capitalize(key))
+            const newRecord = (name + capitalize(key));
+            const newFunction = asFieldName(newRecord);
             record.push(fieldKey + " : " + newRecord);
-            addRecord(newRecord, value, buffer);
+            decoder.push(`i18nRecord "${key}" (${newFunction} translator) fallback.${asFieldName(key)}`);
+            mock.push(`${fieldKey} = ${newFunction}`);
+            addHelper({name: newRecord, context: newContext, data: value, typesBuffer, decodersBuffer, mockBuffer});
         } else
             die('Invalid JSON');
     });
@@ -109,38 +144,56 @@ function addRecord(name: string, data: JSON, buffer: Writable): void {
     if (name == '')
         name = 'Root';
 
-    buffer.write('type alias ' + name + ' =\n    { ');
-    buffer.write(record.join('\n    , '));
-    buffer.write('\n    }\n\n\n');
+    typesBuffer.write('type alias ' + name + ' =\n    { ');
+    typesBuffer.write(record.join('\n    , '));
+    typesBuffer.write('\n    }\n\n\n');
+
+    if (context == '')
+        context = 'root';
+    else
+        context = asFieldName(name);
+
+    decodersBuffer.write(`${context} : I18nTranslator -> Types.${name} -> Decoder Types.${name}\n`
+        +`${context} translator fallback =\n`
+        +`    Decode.succeed Types.${name}\n`);
+    if (decoder.length > 0) {
+        decodersBuffer.write('\n    |> ');
+        decodersBuffer.write(decoder.join('\n    |> '));
+    }
+    decodersBuffer.write('\n');
+
+    mockBuffer.write(`${context} : Types.${name}\n`
+        +`${context} =\n    { `);
+    mockBuffer.write(mock.join('\n    , '));
+    mockBuffer.write('\n    }\n\n\n');
 }
 
 function buildLang (sourceFileName: string, data: JSON): boolean {
-    const moduleName = path.basename(sourceFileName, '.json');
+    const moduleName = capitalize(path.basename(sourceFileName, '.json'));
     const fileName = moduleName+'.elm';
     console.log('Building ' + fileName);
     const filePath = path.join(destNamespacePath, fileName);
+    const buffer = pipeToElmFormat(filePath);
 
-    const subprocess = child_process.spawn('elm-format',
-        ['--stdin', '--output', filePath],
-        { stdio: [ 'pipe', 1, 2 ] }
-    );
+    buffer.write(`module ${moduleNamespace}.${moduleName} exposing (..)\n`
+        +`import ${moduleNamespace}.Types exposing (..)\n`)
 
-    if (subprocess.stdin === null) {
-        die('Unable to pipe to elm-format!'); 
-        return false;
-    }
-    
-    const buffer: Writable = subprocess.stdin;
-
-    buffer.write(`module ${moduleNamespace}.${moduleName} exposing (..)\n\n\nimport ${moduleNamespace}.Types exposing (..)\n\n\n`)
-
-    addValue('', data, buffer);
+    addValue({name: '', data, buffer});
 
     buffer.end();
     return true;
 }
 
-function addValue(name: string, data: JSON, buffer: Writable): void {
+type AddValueAccumulator = {
+    name: string,
+    data: JSON,
+    buffer: Writable
+};
+
+function addValue(accumulator: AddValueAccumulator): void {
+    const {buffer, data} = accumulator;
+    let {name} = accumulator;
+
     const record: string[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
@@ -163,7 +216,7 @@ function addValue(name: string, data: JSON, buffer: Writable): void {
         } else if (value !== null && typeof value == 'object') {
             const newRecord = (name + capitalize(key))
             record.push(fieldKey + " = " + asFieldName(newRecord));
-            addValue(newRecord, value, buffer);
+            addValue({name: newRecord, data: value, buffer});
         } else
             die('Invalid JSON');
     });
@@ -173,10 +226,22 @@ function addValue(name: string, data: JSON, buffer: Writable): void {
 
     const fieldName = asFieldName(name);
 
-    buffer.write(fieldName + ' : ' + name + '\n'
-        + fieldName + ' =\n    { ');
+    buffer.write(`${fieldName} : ${name}\n${fieldName} =\n    {\n`);
     buffer.write(record.join('\n    , '));
-    buffer.write('\n    }\n\n\n');
+    buffer.write('\n    }\n');
+}
+
+function pipeToElmFormat(filePath: string): Writable | never {
+    const subprocess = child_process.spawn('elm-format',
+        ['--stdin', '--output', filePath],
+        { stdio: [ 'pipe', 1, 2 ] }
+    );
+
+    if (subprocess.stdin === null) {
+        return die('Unable to pipe to elm-format!');
+    }
+
+    return subprocess.stdin;
 }
 
 function capitalize (s: string): string {
@@ -191,3 +256,51 @@ function asFieldName (s: string): string {
 
     return s.charAt(0).toLowerCase() + s.slice(1)
 }
+
+const decodersHelpers = `
+type alias I18nTranslator =
+    List ( String, String ) -> String -> String
+
+
+i18nField : String -> String -> Decoder (String -> a) -> Decoder a
+i18nField key fallback =
+    [ Decode.field key Decode.string
+    , Decode.succeed fallback
+    ]
+        |> Decode.oneOf
+        |> i18nDecodePipe
+
+
+i18nReplaceable :
+    String
+    -> (String -> (b -> String))
+    -> (b -> String)
+    -> Decoder ((b -> String) -> a)
+    -> Decoder a
+i18nReplaceable key valueMapper fallback =
+    [ Decode.map valueMapper <| Decode.field key Decode.string
+    , Decode.succeed <| fallback
+    ]
+        |> Decode.oneOf
+        |> i18nDecodePipe
+
+
+i18nRecord :
+    String
+    -> (b -> Decoder b)
+    -> b
+    -> Decoder (b -> a)
+    -> Decoder a
+i18nRecord key decoder fallback =
+    [ Decode.field key (decoder fallback)
+    , Decode.succeed fallback
+    ]
+        |> Decode.oneOf
+        |> i18nDecodePipe
+
+
+i18nDecodePipe : Decoder a -> Decoder (a -> b) -> Decoder b
+i18nDecodePipe next =
+    Decode.andThen (\\previous -> Decode.map previous next)
+
+`;
