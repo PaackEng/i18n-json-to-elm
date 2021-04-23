@@ -46,7 +46,7 @@ export function main (): void {
             const rawJSON = fs.readFileSync(path.join(sourcePath, fileName));
             const parsedJSON = JSON.parse(rawJSON.toString().replace(/\\/g, '\\\\'));
             if (typed === null)
-                typed = buildTypes(parsedJSON);
+                typed = buildHelpers(parsedJSON);
             buildLang(fileName, parsedJSON);
         });
     });
@@ -57,42 +57,42 @@ function die (explanation: string): never {
     return process.exit(1);
 }
 
-function buildTypes (data: JSON): boolean {
-    console.log('Bulding Types.elm / Decoders.elm');
+function buildHelpers (data: JSON): boolean {
+    console.log('Bulding Types.elm / Decoders.elm / MockLanguage.elm');
     const typesBuffer = pipeToElmFormat(path.join(destNamespacePath, 'Types.elm'));
     const decodersBuffer = pipeToElmFormat(path.join(destNamespacePath, 'Decoders.elm'));
+    const mockBuffer = pipeToElmFormat(path.join(destNamespacePath, 'MockLanguage.elm'));
 
     typesBuffer.write(`module ${moduleNamespace}.Types exposing (..)\n`);
     decodersBuffer.write(`module ${moduleNamespace}.Decoders exposing (..)\n`
         +`import ${moduleNamespace}.Types as Types\n`
         +'import Json.Decode as Decode exposing (Decoder)\n'
         +'\n'
-        +'i18nField : Decoder (String -> a) -> Decoder a\n'
-        +'i18nField context key =\n'
-        +'    \n'
-        +'    [ Decode.field key Decode.string\n'
-        +'    , Decode.succeed <| context + "." + key\n'
-        +'    ]\n'
-        +'    |> Decode.oneOf\n'
-        +'    |> Decode.map\n'
+        +decodersHelpers
+        );
+    mockBuffer.write(`module ${moduleNamespace}.MockLanguage exposing (..)\n`
+        +`import ${moduleNamespace}.Types as Types\n`
         );
 
-    addRecord('', '', data, typesBuffer, decodersBuffer);
+    addRecord('', '', data, typesBuffer, decodersBuffer, mockBuffer);
 
     typesBuffer.end();
     decodersBuffer.end();
+    mockBuffer.end();
     return true;
 }
 
 const subEntryRegex = /(?<={{)([^}]+)(?=}})/g;
 const subEntrySed = /{{([^}]+)}}/g;
 
-function addRecord(name: string, context: string, data: JSON, typesBuffer: Writable, decodersBuffer: Writable): void {
+function addRecord(name: string, context: string, data: JSON, typesBuffer: Writable, decodersBuffer: Writable, mockBuffer: Writable): void {
     const record: string[] = [];
     const decoder: string[] = [];
+    const mock: string[] = [];
 
     Object.entries(data).forEach(([key, value]) => {
         const fieldKey = asFieldName(key);
+        const newContext = (context == '' ? key : context + '.' + key);
 
         if (Array.isArray(value)) {
             die('Unexpected array in JSON');
@@ -100,7 +100,8 @@ function addRecord(name: string, context: string, data: JSON, typesBuffer: Writa
             const subEntries = value.match(subEntryRegex);
             if (subEntries == null) {
                 record.push(fieldKey + " : String");
-                decoder.push(`i18nField "${context}" "${key}"`);
+                decoder.push(`i18nField "${key}" fallback.${fieldKey}`);
+                mock.push(`${fieldKey} = "${newContext}"`);
             } else {
                 record.push(
                     fieldKey
@@ -109,19 +110,21 @@ function addRecord(name: string, context: string, data: JSON, typesBuffer: Writa
                     + " } -> String"
                 );
                 decoder.push(
-                    'Decode.oneOf [ Decode.map (\\value {'
+                    `i18nReplaceable "${key}" (\\value {`
                     + subEntries.map((v) => asFieldName(v)).join(', ')
-                    + '} -> value |>\n'
-                    + subEntries.map((v) => `String.replace "{{${v}}}" ${asFieldName(v)}`).join(' |>\n')
-                    + `) (Decode.field "${key}" Decode.string),\nDecode.succeed (\\value _ -> "${context}.${key}") ]`
+                    + '} -> translator ['
+                    + subEntries.map((v) => `( "${v}", ${asFieldName(v)} )`).join('\n , ')
+                    + `] value ) fallback.${fieldKey}`
                 );
+                mock.push(`${fieldKey} = always "${newContext}"`);
             }
         } else if (value !== null && typeof value == 'object') {
             const newRecord = (name + capitalize(key));
-            const newContext = (context == '' ? key : context + '.' + key);
+            const newFunction = asFieldName(newRecord);
             record.push(fieldKey + " : " + newRecord);
-            decoder.push(`Decode.map (Decode.field "${key}" ${fieldKey})`);
-            addRecord(newRecord, newContext, value, typesBuffer, decodersBuffer);
+            decoder.push(`i18nRecord "${key}" (${newFunction} translator) fallback.${asFieldName(key)}`);
+            mock.push(`${fieldKey} = ${newFunction}`);
+            addRecord(newRecord, newContext, value, typesBuffer, decodersBuffer, mockBuffer);
         } else
             die('Invalid JSON');
     });
@@ -138,14 +141,19 @@ function addRecord(name: string, context: string, data: JSON, typesBuffer: Writa
     else
         context = asFieldName(name);
 
-    decodersBuffer.write(`${context} : Decoder Types.${name}\n`
-        +`${context} =\n`
+    decodersBuffer.write(`${context} : I18nTranslator -> Types.${name} -> Decoder Types.${name}\n`
+        +`${context} translator fallback =\n`
         +`    Decode.succeed Types.${name}\n`);
     if (decoder.length > 0) {
         decodersBuffer.write('\n    |> ');
         decodersBuffer.write(decoder.join('\n    |> '));
     }
     decodersBuffer.write('\n');
+
+    mockBuffer.write(`${context} : Types.${name}\n`
+        +`${context} =\n    { `);
+    mockBuffer.write(mock.join('\n    , '));
+    mockBuffer.write('\n    }\n\n\n');
 }
 
 function buildLang (sourceFileName: string, data: JSON): boolean {
@@ -227,3 +235,51 @@ function asFieldName (s: string): string {
 
     return s.charAt(0).toLowerCase() + s.slice(1)
 }
+
+const decodersHelpers = `
+type alias I18nTranslator =
+    List ( String, String ) -> String -> String
+
+
+i18nField : String -> String -> Decoder (String -> a) -> Decoder a
+i18nField key fallback =
+    [ Decode.field key Decode.string
+    , Decode.succeed fallback
+    ]
+        |> Decode.oneOf
+        |> i18nDecodePipe
+
+
+i18nReplaceable :
+    String
+    -> (String -> (b -> String))
+    -> (b -> String)
+    -> Decoder ((b -> String) -> a)
+    -> Decoder a
+i18nReplaceable key valueMapper fallback =
+    [ Decode.map valueMapper <| Decode.field key Decode.string
+    , Decode.succeed <| fallback
+    ]
+        |> Decode.oneOf
+        |> i18nDecodePipe
+
+
+i18nRecord :
+    String
+    -> (b -> Decoder b)
+    -> b
+    -> Decoder (b -> a)
+    -> Decoder a
+i18nRecord key decoder fallback =
+    [ Decode.field key (decoder fallback)
+    , Decode.succeed fallback
+    ]
+        |> Decode.oneOf
+        |> i18nDecodePipe
+
+
+i18nDecodePipe : Decoder a -> Decoder (a -> b) -> Decoder b
+i18nDecodePipe next =
+    Decode.andThen (\\previous -> Decode.map previous next)
+
+`;
