@@ -1,6 +1,6 @@
 {
   "name": "i18n-json-to-elm",
-  "version": "1.1.2",
+  "version": "1.2.0",
   "description": "Generates Elm sources from i18n's JSONs.",
   "main": "lib/index.js",
   "bin": {
