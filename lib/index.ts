@@ -9,9 +9,20 @@ let destPath = path.join(projectPath, '.elm-i18n');
 let moduleNamespace = 'I18n';
 let destNamespacePath = path.join(destPath, moduleNamespace);
 const configJson = path.join(projectPath, 'i18n.json');
-type Config = Partial<{ source: string; dest: string; namespace: string }>;
+type Config = Partial<{
+  source: string;
+  dest: string;
+  namespace: string;
+  generateDecoders: boolean;
+  generateMockLanguage: boolean;
+}>;
 
 export function main(): void {
+  const buildWhatHelpers = {
+    generateDecoders: false,
+    generateMockLanguage: false,
+  };
+
   if (fs.existsSync(configJson)) {
     const rawJSON = fs.readFileSync(configJson);
     const json: Config = JSON.parse(rawJSON.toString());
@@ -20,6 +31,10 @@ export function main(): void {
     if (json.dest != undefined) destPath = path.join(projectPath, json.dest);
     if (json.namespace != undefined) moduleNamespace = json.namespace;
     destNamespacePath = path.join(destPath, ...moduleNamespace.split('.'));
+    if (json.generateDecoders != undefined)
+      buildWhatHelpers.generateDecoders = json.generateDecoders;
+    if (json.generateMockLanguage != undefined)
+      buildWhatHelpers.generateMockLanguage = json.generateMockLanguage;
   }
 
   if (!fs.existsSync(destPath)) fs.mkdirSync(destPath);
@@ -41,7 +56,7 @@ export function main(): void {
 
       const rawJSON = fs.readFileSync(path.join(sourcePath, fileName));
       const parsedJSON = JSON.parse(rawJSON.toString().replace(/\\/g, '\\\\'));
-      if (typed === null) typed = buildHelpers(parsedJSON);
+      if (typed === null) typed = buildHelpers(parsedJSON, buildWhatHelpers);
       buildLang(fileName, parsedJSON);
     });
   });
@@ -52,30 +67,41 @@ function die(explanation: string): never {
   return process.exit(1);
 }
 
-function buildHelpers(data: JSON): boolean {
-  console.log('Bulding Types.elm / Decoders.elm / MockLanguage.elm');
+type BuildWhatHelpers = {
+  generateDecoders: boolean;
+  generateMockLanguage: boolean;
+};
+
+function buildHelpers(data: JSON, what: BuildWhatHelpers): boolean {
+  let announce = 'Bulding Types.elm';
+  if (what.generateDecoders) announce += ' / Decoders.elm';
+  if (what.generateMockLanguage) announce += ' / MockLanguage.elm';
+  console.log(announce);
+
   const typesBuffer = pipeToElmFormat(
     path.join(destNamespacePath, 'Types.elm'),
   );
-  const decodersBuffer = pipeToElmFormat(
-    path.join(destNamespacePath, 'Decoders.elm'),
-  );
-  const mockBuffer = pipeToElmFormat(
-    path.join(destNamespacePath, 'MockLanguage.elm'),
-  );
+  const decodersBuffer = what.generateDecoders
+    ? pipeToElmFormat(path.join(destNamespacePath, 'Decoders.elm'))
+    : null;
+  const mockBuffer = what.generateMockLanguage
+    ? pipeToElmFormat(path.join(destNamespacePath, 'MockLanguage.elm'))
+    : null;
 
   typesBuffer.write(`module ${moduleNamespace}.Types exposing (..)\n`);
-  decodersBuffer.write(
-    `module ${moduleNamespace}.Decoders exposing (..)\n` +
-      `import ${moduleNamespace}.Types as Types\n` +
-      'import Json.Decode as Decode exposing (Decoder)\n' +
-      '\n' +
-      decodersHelpers,
-  );
-  mockBuffer.write(
-    `module ${moduleNamespace}.MockLanguage exposing (..)\n` +
-      `import ${moduleNamespace}.Types as Types\n`,
-  );
+  if (decodersBuffer !== null)
+    decodersBuffer.write(
+      `module ${moduleNamespace}.Decoders exposing (..)\n` +
+        `import ${moduleNamespace}.Types as Types\n` +
+        'import Json.Decode as Decode exposing (Decoder)\n' +
+        '\n' +
+        decodersHelpers,
+    );
+  if (mockBuffer !== null)
+    mockBuffer.write(
+      `module ${moduleNamespace}.MockLanguage exposing (..)\n` +
+        `import ${moduleNamespace}.Types as Types\n`,
+    );
 
   addHelper({
     name: '',
@@ -87,8 +113,8 @@ function buildHelpers(data: JSON): boolean {
   });
 
   typesBuffer.end();
-  decodersBuffer.end();
-  mockBuffer.end();
+  if (decodersBuffer !== null) decodersBuffer.end();
+  if (mockBuffer !== null) mockBuffer.end();
   return true;
 }
 
@@ -100,8 +126,8 @@ type AddHelperAccumulator = {
   context: string;
   data: JSON;
   typesBuffer: Writable;
-  decodersBuffer: Writable;
-  mockBuffer: Writable;
+  decodersBuffer: Writable | null;
+  mockBuffer: Writable | null;
 };
 
 function addHelper(accumulator: AddHelperAccumulator): void {
@@ -172,20 +198,24 @@ function addHelper(accumulator: AddHelperAccumulator): void {
   if (context == '') context = 'root';
   else context = asFieldName(name);
 
-  decodersBuffer.write(
-    `${context} : I18nTranslator -> Types.${name} -> Decoder Types.${name}\n` +
-      `${context} translator fallback =\n` +
-      `    Decode.succeed Types.${name}\n`,
-  );
-  if (decoder.length > 0) {
-    decodersBuffer.write('\n    |> ');
-    decodersBuffer.write(decoder.join('\n    |> '));
+  if (decodersBuffer !== null) {
+    decodersBuffer.write(
+      `${context} : I18nTranslator -> Types.${name} -> Decoder Types.${name}\n` +
+        `${context} translator fallback =\n` +
+        `    Decode.succeed Types.${name}\n`,
+    );
+    if (decoder.length > 0) {
+      decodersBuffer.write('\n    |> ');
+      decodersBuffer.write(decoder.join('\n    |> '));
+    }
+    decodersBuffer.write('\n');
   }
-  decodersBuffer.write('\n');
 
-  mockBuffer.write(`${context} : Types.${name}\n` + `${context} =\n    { `);
-  mockBuffer.write(mock.join('\n    , '));
-  mockBuffer.write('\n    }\n\n\n');
+  if (mockBuffer !== null) {
+    mockBuffer.write(`${context} : Types.${name}\n` + `${context} =\n    { `);
+    mockBuffer.write(mock.join('\n    , '));
+    mockBuffer.write('\n    }\n\n\n');
+  }
 }
 
 function buildLang(sourceFileName: string, data: JSON): boolean {
