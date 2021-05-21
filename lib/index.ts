@@ -19,7 +19,7 @@ type Config = Partial<{
 }>;
 
 let typeGenerated: boolean | null = null;
-const buildWhatHelpers = {
+const buildConfig = {
   generateDecoders: false,
   generateMockLanguage: false,
 };
@@ -37,9 +37,9 @@ export function main(): void {
     if (json.namespace != undefined) moduleNamespace = json.namespace;
     destNamespacePath = path.join(destPath, ...moduleNamespace.split('.'));
     if (json.generateDecoders != undefined)
-      buildWhatHelpers.generateDecoders = json.generateDecoders;
+      buildConfig.generateDecoders = json.generateDecoders;
     if (json.generateMockLanguage != undefined)
-      buildWhatHelpers.generateMockLanguage = json.generateMockLanguage;
+      buildConfig.generateMockLanguage = json.generateMockLanguage;
     if (json.languages != undefined) languages = json.languages;
   }
 
@@ -67,7 +67,7 @@ export function main(): void {
   }
 }
 
-function transformFile(fileName: string) {
+function transformFile(fileName: string): void {
   console.log('Working with "' + fileName + '".');
   const rawJSON = fs.readFileSync(path.join(sourcePath, fileName));
   const parsedJSON = JSON.parse(rawJSON.toString().replace(/\\/g, '\\\\'));
@@ -82,17 +82,17 @@ function die(explanation: string): never {
 
 function buildHelpers(data: JSON): boolean {
   let announce = 'Bulding Types.elm';
-  if (buildWhatHelpers.generateDecoders) announce += ' / Decoders.elm';
-  if (buildWhatHelpers.generateMockLanguage) announce += ' / MockLanguage.elm';
+  if (buildConfig.generateDecoders) announce += ' / Decoders.elm';
+  if (buildConfig.generateMockLanguage) announce += ' / MockLanguage.elm';
   console.log(announce);
 
   const typesBuffer = pipeToElmFormat(
     path.join(destNamespacePath, 'Types.elm'),
   );
-  const decodersBuffer = buildWhatHelpers.generateDecoders
+  const decodersBuffer = buildConfig.generateDecoders
     ? pipeToElmFormat(path.join(destNamespacePath, 'Decoders.elm'))
     : null;
-  const mockBuffer = buildWhatHelpers.generateMockLanguage
+  const mockBuffer = buildConfig.generateMockLanguage
     ? pipeToElmFormat(path.join(destNamespacePath, 'MockLanguage.elm'))
     : null;
 
