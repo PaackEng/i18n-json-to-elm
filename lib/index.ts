@@ -25,7 +25,7 @@ const buildWhatHelpers = {
 };
 
 export function main(): void {
-  let languages: string[] | null = null;
+  let languages: string[] = [];
 
   if (fs.existsSync(configJson)) {
     console.log('Reading config...');
@@ -46,7 +46,7 @@ export function main(): void {
   if (!fs.existsSync(destPath)) fs.mkdirSync(destPath);
   if (!fs.existsSync(destNamespacePath)) fs.mkdirSync(destNamespacePath);
 
-  if (languages === null || languages === []) {
+  if (languages.length < 1) {
     fs.readdir(sourcePath, function (err, pathFiles) {
       if (err) {
         return console.log('Unable to scan directory: ' + err);

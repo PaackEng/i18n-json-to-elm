@@ -28,13 +28,13 @@ Create a i18n.json with the following contents:
 - `"namespace"` defaults to `"I18n"`;
 - `"generateDecoders"` defaults to `false`;
 - `"generateMockLanguage"` defaults to `false`.
-- `"languages"` defaults to `null` (`null` searches for `${source}/*.json`).
+- `"languages"` defaults to `[]` (when empty, it'll search for `${source}/*.json` instead).
 
 ## Optional features
 
 - `"generateDecoders"` generates a `Decoders.elm` with JSON decoders;
 - `"generateMockLanguage"` generates a `MockLanguage.elm` where the value of each terms reflects their own `context.key`.
-- `"languages"` chooses what files to transform, helps when using with `"generateDecoders"` for loading non-specified languages during runtime.
+- `"languages"` chooses what files to transform; helps when using with `"generateDecoders"` for loading non-specified languages during runtime.
 
 ## Running
 
