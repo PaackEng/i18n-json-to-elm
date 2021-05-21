@@ -68,36 +68,31 @@ export function main(): void {
 }
 
 function transformFile(fileName: string) {
-    console.log('Working with "' + fileName + '".');
-    const rawJSON = fs.readFileSync(path.join(sourcePath, fileName));
-    const parsedJSON = JSON.parse(rawJSON.toString().replace(/\\/g, '\\\\'));
-    if (typeGenerated === null) typeGenerated = buildHelpers(parsedJSON, buildWhatHelpers);
-    buildLang(fileName, parsedJSON);
-  }
+  console.log('Working with "' + fileName + '".');
+  const rawJSON = fs.readFileSync(path.join(sourcePath, fileName));
+  const parsedJSON = JSON.parse(rawJSON.toString().replace(/\\/g, '\\\\'));
+  if (typeGenerated === null) typeGenerated = buildHelpers(parsedJSON);
+  buildLang(fileName, parsedJSON);
+}
 
 function die(explanation: string): never {
   console.log(explanation);
   return process.exit(1);
 }
 
-type BuildWhatHelpers = {
-  generateDecoders: boolean;
-  generateMockLanguage: boolean;
-};
-
-function buildHelpers(data: JSON, what: BuildWhatHelpers): boolean {
+function buildHelpers(data: JSON): boolean {
   let announce = 'Bulding Types.elm';
-  if (what.generateDecoders) announce += ' / Decoders.elm';
-  if (what.generateMockLanguage) announce += ' / MockLanguage.elm';
+  if (buildWhatHelpers.generateDecoders) announce += ' / Decoders.elm';
+  if (buildWhatHelpers.generateMockLanguage) announce += ' / MockLanguage.elm';
   console.log(announce);
 
   const typesBuffer = pipeToElmFormat(
     path.join(destNamespacePath, 'Types.elm'),
   );
-  const decodersBuffer = what.generateDecoders
+  const decodersBuffer = buildWhatHelpers.generateDecoders
     ? pipeToElmFormat(path.join(destNamespacePath, 'Decoders.elm'))
     : null;
-  const mockBuffer = what.generateMockLanguage
+  const mockBuffer = buildWhatHelpers.generateMockLanguage
     ? pipeToElmFormat(path.join(destNamespacePath, 'MockLanguage.elm'))
     : null;
 
