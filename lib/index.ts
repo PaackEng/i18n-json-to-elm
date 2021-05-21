@@ -15,15 +15,20 @@ type Config = Partial<{
   namespace: string;
   generateDecoders: boolean;
   generateMockLanguage: boolean;
+  languages: string[];
 }>;
 
+let typeGenerated: boolean | null = null;
+const buildWhatHelpers = {
+  generateDecoders: false,
+  generateMockLanguage: false,
+};
+
 export function main(): void {
-  const buildWhatHelpers = {
-    generateDecoders: false,
-    generateMockLanguage: false,
-  };
+  let languages: string[] | null = null;
 
   if (fs.existsSync(configJson)) {
+    console.log('Reading config...');
     const rawJSON = fs.readFileSync(configJson);
     const json: Config = JSON.parse(rawJSON.toString());
     if (json.source != undefined)
@@ -35,32 +40,40 @@ export function main(): void {
       buildWhatHelpers.generateDecoders = json.generateDecoders;
     if (json.generateMockLanguage != undefined)
       buildWhatHelpers.generateMockLanguage = json.generateMockLanguage;
+    if (json.languages != undefined) languages = json.languages;
   }
 
   if (!fs.existsSync(destPath)) fs.mkdirSync(destPath);
   if (!fs.existsSync(destNamespacePath)) fs.mkdirSync(destNamespacePath);
 
-  fs.readdir(sourcePath, function (err, files) {
-    if (err) {
-      return console.log('Unable to scan directory: ' + err);
-    }
-
-    let typed: boolean | null = null;
-
-    files.forEach(function (fileName) {
-      if (fileName.startsWith('.')) return;
-      if (!fileName.endsWith('.json')) {
-        console.log('Ignoring "' + fileName + '".');
-        return;
+  if (languages === null || languages === []) {
+    fs.readdir(sourcePath, function (err, pathFiles) {
+      if (err) {
+        return console.log('Unable to scan directory: ' + err);
       }
 
-      const rawJSON = fs.readFileSync(path.join(sourcePath, fileName));
-      const parsedJSON = JSON.parse(rawJSON.toString().replace(/\\/g, '\\\\'));
-      if (typed === null) typed = buildHelpers(parsedJSON, buildWhatHelpers);
-      buildLang(fileName, parsedJSON);
+      pathFiles.forEach(function (fileName) {
+        if (fileName.startsWith('.')) return;
+        if (!fileName.endsWith('.json')) {
+          console.log('Ignoring "' + fileName + '".');
+          return;
+        }
+
+        transformFile(fileName);
+      });
     });
-  });
+  } else {
+    languages.map((el) => el + '.json').forEach(transformFile);
+  }
 }
+
+function transformFile(fileName: string) {
+    console.log('Working with "' + fileName + '".');
+    const rawJSON = fs.readFileSync(path.join(sourcePath, fileName));
+    const parsedJSON = JSON.parse(rawJSON.toString().replace(/\\/g, '\\\\'));
+    if (typeGenerated === null) typeGenerated = buildHelpers(parsedJSON, buildWhatHelpers);
+    buildLang(fileName, parsedJSON);
+  }
 
 function die(explanation: string): never {
   console.log(explanation);
