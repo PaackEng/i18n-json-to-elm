@@ -46,25 +46,26 @@ Just run `npx i18n-json-to-elm`.
 
 This is how a valid `"i18n/English.json"` would look like:
 
-````json
+```json
 {
-    "common": {
-      "retry": "Retry",
-      "loading": "Loading...",
-      "username": "Username/Email",
-      "password": "Password"
-    },
-    "dialogs": {
-      "rename": {
-        "title": "Renaming",
-        "body": "From {{oldName}} to {{newName}}"
-      }
-    },
-    "errors": {
-        "httpFailure": "Network error.",
-        "credInvalid": "Invalid credentials, please try again."
+  "common": {
+    "retry": "Retry",
+    "loading": "Loading...",
+    "username": "Username/Email",
+    "password": "Password"
+  },
+  "dialogs": {
+    "rename": {
+      "title": "Renaming",
+      "body": "From {{oldName}} to {{newName}}"
     }
+  },
+  "errors": {
+    "httpFailure": "Network error.",
+    "credInvalid": "Invalid credentials, please try again."
+  }
 }
+```
 
 This is how the resulting `"src/I18n/Types.elm"` will look like:
 
@@ -101,7 +102,7 @@ type alias Root =
     , dialogs : Dialogs
     , errors : Errors
     }
-````
+```
 
 This is how the resulting `"src/I18n/English.elm` will look like:
 
