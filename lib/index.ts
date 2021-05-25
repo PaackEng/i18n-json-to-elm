@@ -49,13 +49,13 @@ export function main(): void {
   if (languages.length < 1) {
     fs.readdir(sourcePath, function (err, pathFiles) {
       if (err) {
-        return console.log('Unable to scan directory: ' + err);
+        return console.log(`Unable to scan directory: ${err}`);
       }
 
       pathFiles.forEach(function (fileName) {
         if (fileName.startsWith('.')) return;
         if (!fileName.endsWith('.json')) {
-          console.log('Ignoring "' + fileName + '".');
+          console.log(`Ignoring "${fileName}".`);
           return;
         }
 
@@ -63,12 +63,12 @@ export function main(): void {
       });
     });
   } else {
-    languages.map((el) => el + '.json').forEach(transformFile);
+    languages.map((el) => `${el}.json`).forEach(transformFile);
   }
 }
 
 function transformFile(fileName: string): void {
-  console.log('Working with "' + fileName + '".');
+  console.log(`Working with "${fileName}".`);
   const rawJSON = fs.readFileSync(path.join(sourcePath, fileName));
   const parsedJSON = JSON.parse(rawJSON.toString().replace(/\\/g, '\\\\'));
   if (typeGenerated === null) typeGenerated = buildHelpers(parsedJSON);
@@ -102,8 +102,7 @@ function buildHelpers(data: JSON): boolean {
       `module ${moduleNamespace}.Decoders exposing (..)\n` +
         `import ${moduleNamespace}.Types as Types\n` +
         'import Json.Decode as Decode exposing (Decoder)\n' +
-        '\n' +
-        decodersHelpers,
+        `\n${decodersHelpers}`,
     );
   if (mockBuffer !== null)
     mockBuffer.write(
@@ -148,42 +147,41 @@ function addHelper(accumulator: AddHelperAccumulator): void {
 
   Object.entries(data).forEach(([key, value]) => {
     const fieldKey = asFieldName(key);
-    const newContext = context == '' ? key : context + '.' + key;
+    const newContext = context == '' ? key : `${context}.${key}`;
 
     if (Array.isArray(value)) {
       die('Unexpected array in JSON');
     } else if (typeof value == 'string') {
       const subEntries = value.match(subEntryRegex);
       if (subEntries == null) {
-        record.push(fieldKey + ' : String');
+        record.push(`${fieldKey} : String`);
         decoder.push(`i18nField "${key}" fallback.${fieldKey}`);
         mock.push(`${fieldKey} = "${newContext}"`);
       } else {
-        record.push(
-          fieldKey +
-            ' : { ' +
-            subEntries.map((v) => asFieldName(v) + ' : String').join(', ') +
-            ' } -> String',
-        );
+        const signatureFields = subEntries
+          .map((v) => `${asFieldName(v)} : String`)
+          .join(', ');
+        record.push(`${fieldKey} : { ${signatureFields} } -> String`);
+
+        const lambdaParameters = subEntries
+          .map((v) => asFieldName(v))
+          .join(', ');
+        const arrayEntries = subEntries
+          .map((v) => `( "${v}", ${asFieldName(v)} )`)
+          .join('\n , ');
         decoder.push(
-          `i18nReplaceable "${key}" (\\value {` +
-            subEntries.map((v) => asFieldName(v)).join(', ') +
-            '} -> translator [' +
-            subEntries
-              .map((v) => `( "${v}", ${asFieldName(v)} )`)
-              .join('\n , ') +
-            `] value ) fallback.${fieldKey}`,
+          `i18nReplaceable "${key}" (\\value {${lambdaParameters}} -> translator [${arrayEntries}] value ) fallback.${fieldKey}`,
         );
+
         mock.push(`${fieldKey} = always "${newContext}"`);
       }
     } else if (value !== null && typeof value == 'object') {
       const newRecord = name + capitalize(key);
       const newFunction = asFieldName(newRecord);
-      record.push(fieldKey + ' : ' + newRecord);
+      const fallbackFieldName = asFieldName(key);
+      record.push(`${fieldKey} : ${newRecord}`);
       decoder.push(
-        `i18nRecord "${key}" (${newFunction} translator) fallback.${asFieldName(
-          key,
-        )}`,
+        `i18nRecord "${key}" (${newFunction} translator) fallback.${fallbackFieldName}`,
       );
       mock.push(`${fieldKey} = ${newFunction}`);
       addHelper({
@@ -199,7 +197,7 @@ function addHelper(accumulator: AddHelperAccumulator): void {
 
   if (name == '') name = 'Root';
 
-  typesBuffer.write('type alias ' + name + ' =\n    { ');
+  typesBuffer.write(`type alias ${name} =\n    { `);
   typesBuffer.write(record.join('\n    , '));
   typesBuffer.write('\n    }\n\n\n');
 
@@ -228,8 +226,8 @@ function addHelper(accumulator: AddHelperAccumulator): void {
 
 function buildLang(sourceFileName: string, data: JSON): boolean {
   const moduleName = capitalize(path.basename(sourceFileName, '.json'));
-  const fileName = moduleName + '.elm';
-  console.log('Building ' + fileName);
+  const fileName = `${moduleName}.elm`;
+  console.log(`Building "${fileName}".`);
   const filePath = path.join(destNamespacePath, fileName);
   const buffer = pipeToElmFormat(filePath);
 
@@ -263,19 +261,18 @@ function addValue(accumulator: AddValueAccumulator): void {
       die('Unexpected array in JSON');
     } else if (typeof value == 'string') {
       const subEntries = value.match(subEntryRegex);
-      if (subEntries == null) record.push(fieldKey + ' = "' + value + '"');
+      if (subEntries == null) record.push(`${fieldKey} = "${value}"`);
       else
-        record.push(
-          fieldKey +
-            ' = \\{ ' +
-            subEntries.map((v) => asFieldName(v)).join(', ') +
-            ' } -> "' +
-            value.replace(subEntrySed, '" ++ $1 ++ "') +
-            '"',
-        );
+        const lambdaParameters = subEntries
+          .map((v) => asFieldName(v))
+          .join(', ');
+      const replacedSubEntry = value.replace(subEntrySed, '" ++ $1 ++ "');
+      record.push(
+        `${fieldKey} = \\{ ${lambdaParameters} } -> "${replacedSubEntry}"`,
+      );
     } else if (value !== null && typeof value == 'object') {
       const newRecord = name + capitalize(key);
-      record.push(fieldKey + ' = ' + asFieldName(newRecord));
+      record.push(`${fieldKey} = ${asFieldName(newRecord)}`);
       addValue({ name: newRecord, data: value, buffer });
     } else die('Invalid JSON');
   });
@@ -310,7 +307,7 @@ function capitalize(s: string): string {
 function asFieldName(s: string): string {
   const head = s.charAt(0);
 
-  if (head >= '0' && head <= '9') return 'n' + s;
+  if (head >= '0' && head <= '9') return `n${s}`;
 
   return s.charAt(0).toLowerCase() + s.slice(1);
 }
