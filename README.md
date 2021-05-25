@@ -4,7 +4,7 @@ Generates Elm sources from i18n's JSONs.
 
 ## Instructions
 
-- Download the json from POEditor using "key - value" format.
+- Download the JSON from POEditor, using "key - value" format.
 - Save it inside an `i18n` (configurable as `"source"`) folder in your project's path.
 - Add `.elm-i18n` (configurable as `"dest"`) to `source-directories` in your `elm.json`.
 
@@ -18,7 +18,8 @@ Create a i18n.json with the following contents:
   "dest": ".elm-i18n",
   "namespace": "MyModuleName",
   "generateDecoders": true,
-  "generateMockLanguage": true
+  "generateMockLanguage": true,
+  "languages": ["English"]
 }
 ```
 
@@ -27,11 +28,13 @@ Create a i18n.json with the following contents:
 - `"namespace"` defaults to `"I18n"`;
 - `"generateDecoders"` defaults to `false`;
 - `"generateMockLanguage"` defaults to `false`.
+- `"languages"` defaults to `[]` (when empty, it'll search for `${source}/*.json` instead).
 
 ## Optional features
 
 - `"generateDecoders"` generates a `Decoders.elm` with JSON decoders;
 - `"generateMockLanguage"` generates a `MockLanguage.elm` where the value of each terms reflects their own `context.key`.
+- `"languages"` chooses what files to transform; helps when using with `"generateDecoders"` for loading non-specified languages during runtime.
 
 ## Running
 
