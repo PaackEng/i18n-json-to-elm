@@ -262,14 +262,16 @@ function addValue(accumulator: AddValueAccumulator): void {
     } else if (typeof value == 'string') {
       const subEntries = value.match(subEntryRegex);
       if (subEntries == null) record.push(`${fieldKey} = "${value}"`);
-      else
+      else {
         const lambdaParameters = subEntries
           .map((v) => asFieldName(v))
           .join(', ');
-      const replacedSubEntry = value.replace(subEntrySed, '" ++ $1 ++ "');
-      record.push(
-        `${fieldKey} = \\{ ${lambdaParameters} } -> "${replacedSubEntry}"`,
-      );
+
+        const replacedSubEntry = value.replace(subEntrySed, '" ++ $1 ++ "');
+        record.push(
+          `${fieldKey} = \\{ ${lambdaParameters} } -> "${replacedSubEntry}"`,
+        );
+      }
     } else if (value !== null && typeof value == 'object') {
       const newRecord = name + capitalize(key);
       record.push(`${fieldKey} = ${asFieldName(newRecord)}`);
