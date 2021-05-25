@@ -124,7 +124,7 @@ common =
 dialogsRename : DialogsRename
 dialogsRename =
     { title = "Renaming"
-    , body = \{ oldName, newName } -> "From " ++ oldName ++ " to " ++ newName ++ ""
+    , body = \{ oldName, newName } -> "From " ++ oldName ++ " to " ++ newName
     }
 
 
