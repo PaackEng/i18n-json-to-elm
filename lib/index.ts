@@ -156,7 +156,7 @@ function addHelper(accumulator: AddHelperAccumulator): void {
       if (subEntries == null) {
         record.push(`${fieldKey} : String`);
         decoder.push(`i18nField "${key}" fallback.${fieldKey}`);
-        mock.push(`${fieldKey} = "${newContext}"`);
+        mock.push(`${fieldKey} = "[${newContext}]"`);
       } else {
         const signatureFields = subEntries
           .map((v) => `${asFieldName(v)} : String`)
@@ -173,7 +173,7 @@ function addHelper(accumulator: AddHelperAccumulator): void {
           `i18nReplaceable "${key}" (\\value {${lambdaParameters}} -> translator [${arrayEntries}] value ) fallback.${fieldKey}`,
         );
 
-        mock.push(`${fieldKey} = always "${newContext}"`);
+        mock.push(`${fieldKey} = always "[${newContext}]"`);
       }
     } else if (value !== null && typeof value == 'object') {
       const newRecord = name + capitalize(key);
