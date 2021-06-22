@@ -6,13 +6,9 @@ Describe here
 
 Describe here
 
-#### :pushpin: Jira Issue
-
-[LMO-CODE](https://paacklogistics.atlassian.net/browse/LMO-CODE) or Not tracked.
-
 #### :no_good: Blocked by
 
-[LMO-CODE](https://paacklogistics.atlassian.net/browse/LMO-CODE), [PR#CODE](pr-url) or Nothing.
+[PR#CODE](pr-url) or Nothing.
 
 #### :clipboard: Pending
 
