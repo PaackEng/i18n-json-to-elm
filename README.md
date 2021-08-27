@@ -19,7 +19,9 @@ Create a i18n.json with the following contents:
   "namespace": "MyModuleName",
   "generateDecoders": true,
   "generateMockLanguage": true,
-  "languages": ["English"]
+  "languages": ["English", "Spanish"],
+  "emptyFallback": "English",
+  "rootType": "Root"
 }
 ```
 
@@ -28,13 +30,17 @@ Create a i18n.json with the following contents:
 - `"namespace"` defaults to `"I18n"`;
 - `"generateDecoders"` defaults to `false`;
 - `"generateMockLanguage"` defaults to `false`.
-- `"languages"` defaults to `[]` (when empty, it'll search for `${source}/*.json` instead).
+- `"languages"` defaults to `[]` (when empty, it'll search for `${source}/*.json` instead);
+- `"emptyFallback"` defaults to `null` (when null, don't try falling back);
+- `"rootType"` defaults to `"Root"`.
 
 ## Optional features
 
 - `"generateDecoders"` generates a `Decoders.elm` with JSON decoders;
 - `"generateMockLanguage"` generates a `MockLanguage.elm` where the value of each terms reflects their own `context.key`.
 - `"languages"` chooses what files to transform; helps when using with `"generateDecoders"` for loading non-specified languages during runtime.
+- `"emptyFallback"` replaces empty translation terms (e.g.: `"yes": ""`) with references for another language's translation.
+- `"rootType"` customize the type for the root entry of the langages (e.g: `"Root"` will generate `English.root.someDialog.title`).
 
 ## Running
 
