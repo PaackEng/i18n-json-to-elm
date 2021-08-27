@@ -8,7 +8,7 @@ let sourcePath = path.join(projectPath, 'i18n');
 let destPath = path.join(projectPath, '.elm-i18n');
 let moduleNamespace = 'I18n';
 let destNamespacePath = path.join(destPath, moduleNamespace);
-let emptyFallback : string | null = null;
+let emptyFallback: string | null = null;
 const configJson = path.join(projectPath, 'i18n.json');
 type Config = Partial<{
   source: string;
@@ -240,7 +240,9 @@ function buildLang(sourceFileName: string, data: JSON): boolean {
   );
 
   if (emptyFallback && emptyFallback !== moduleName) {
-    buffer.write(`import ${moduleNamespace}.${emptyFallback} as EmptyFallback\n`);
+    buffer.write(
+      `import ${moduleNamespace}.${emptyFallback} as EmptyFallback\n`,
+    );
   }
 
   addValue({ moduleName, name: '', data, buffer });
@@ -250,7 +252,7 @@ function buildLang(sourceFileName: string, data: JSON): boolean {
 }
 
 type AddValueAccumulator = {
-  moduleName: string
+  moduleName: string;
   name: string;
   data: JSON;
   buffer: Writable;
@@ -269,8 +271,14 @@ function addValue(accumulator: AddValueAccumulator): void {
       die('Unexpected array in JSON');
     } else if (typeof value == 'string') {
       const subEntries = value.match(subEntryRegex);
-      if (value == '' && emptyFallback && emptyFallback !== accumulator.moduleName) {
-        record.push(`${fieldKey} = EmptyFallback.${asFieldName(name)}.${fieldKey}`);
+      if (
+        value == '' &&
+        emptyFallback &&
+        emptyFallback !== accumulator.moduleName
+      ) {
+        record.push(
+          `${fieldKey} = EmptyFallback.${asFieldName(name)}.${fieldKey}`,
+        );
       } else if (subEntries == null) {
         record.push(`${fieldKey} = "${value}"`);
       } else {
@@ -286,7 +294,12 @@ function addValue(accumulator: AddValueAccumulator): void {
     } else if (value !== null && typeof value == 'object') {
       const newRecord = name + capitalize(key);
       record.push(`${fieldKey} = ${asFieldName(newRecord)}`);
-      addValue({ moduleName: accumulator.moduleName, name: newRecord, data: value, buffer });
+      addValue({
+        moduleName: accumulator.moduleName,
+        name: newRecord,
+        data: value,
+        buffer,
+      });
     } else die('Invalid JSON');
   });
 
