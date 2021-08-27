@@ -8,6 +8,7 @@ let sourcePath = path.join(projectPath, 'i18n');
 let destPath = path.join(projectPath, '.elm-i18n');
 let moduleNamespace = 'I18n';
 let destNamespacePath = path.join(destPath, moduleNamespace);
+let emptyFallback : string | null = null;
 const configJson = path.join(projectPath, 'i18n.json');
 type Config = Partial<{
   source: string;
@@ -16,6 +17,7 @@ type Config = Partial<{
   generateDecoders: boolean;
   generateMockLanguage: boolean;
   languages: string[];
+  emptyFallback: string | null;
 }>;
 
 let typeGenerated: boolean | null = null;
@@ -41,6 +43,7 @@ export function main(): void {
     if (json.generateMockLanguage != undefined)
       buildConfig.generateMockLanguage = json.generateMockLanguage;
     if (json.languages != undefined) languages = json.languages;
+    if (json.emptyFallback != undefined) emptyFallback = json.emptyFallback;
   }
 
   if (!fs.existsSync(destPath)) fs.mkdirSync(destPath);
@@ -236,6 +239,10 @@ function buildLang(sourceFileName: string, data: JSON): boolean {
       `import ${moduleNamespace}.Types exposing (..)\n`,
   );
 
+  if (emptyFallback) {
+    buffer.write(`import ${moduleNamespace}.${emptyFallback} as EmptyFallback\n`);
+  }
+
   addValue({ name: '', data, buffer });
 
   buffer.end();
@@ -261,8 +268,11 @@ function addValue(accumulator: AddValueAccumulator): void {
       die('Unexpected array in JSON');
     } else if (typeof value == 'string') {
       const subEntries = value.match(subEntryRegex);
-      if (subEntries == null) record.push(`${fieldKey} = "${value}"`);
-      else {
+      if (value == '' && emptyFallback) {
+        record.push(`${fieldKey} = EmptyFallback.${asFieldName(name)}.${fieldKey}`);
+      } else if (subEntries == null) {
+        record.push(`${fieldKey} = "${value}"`);
+      } else {
         const lambdaParameters = subEntries
           .map((v) => asFieldName(v))
           .join(', ');

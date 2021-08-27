@@ -4,4 +4,4 @@ i18n.json
 i18n-json-to-elm-v*.tgz
 node_modules/
 tests/
-**/*.js
+**.js
