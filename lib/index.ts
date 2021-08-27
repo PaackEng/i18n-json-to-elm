@@ -268,7 +268,7 @@ function addValue(accumulator: AddValueAccumulator): void {
       die('Unexpected array in JSON');
     } else if (typeof value == 'string') {
       const subEntries = value.match(subEntryRegex);
-      if (value == '' && emptyFallback) {
+      if (value == '' && emptyFallback && emptyFallback !== moduleName) {
         record.push(`${fieldKey} = EmptyFallback.${asFieldName(name)}.${fieldKey}`);
       } else if (subEntries == null) {
         record.push(`${fieldKey} = "${value}"`);
