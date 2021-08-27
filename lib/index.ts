@@ -239,7 +239,7 @@ function buildLang(sourceFileName: string, data: JSON): boolean {
       `import ${moduleNamespace}.Types exposing (..)\n`,
   );
 
-  if (emptyFallback) {
+  if (emptyFallback && emptyFallback !== moduleName) {
     buffer.write(`import ${moduleNamespace}.${emptyFallback} as EmptyFallback\n`);
   }
 
