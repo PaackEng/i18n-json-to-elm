@@ -9,6 +9,7 @@ let destPath = path.join(projectPath, '.elm-i18n');
 let moduleNamespace = 'I18n';
 let destNamespacePath = path.join(destPath, moduleNamespace);
 let emptyFallback: string | null = null;
+let rootType = 'Root';
 const configJson = path.join(projectPath, 'i18n.json');
 type Config = Partial<{
   source: string;
@@ -18,6 +19,7 @@ type Config = Partial<{
   generateMockLanguage: boolean;
   languages: string[];
   emptyFallback: string | null;
+  rootType: string;
 }>;
 
 let typeGenerated: boolean | null = null;
@@ -44,6 +46,7 @@ export function main(): void {
       buildConfig.generateMockLanguage = json.generateMockLanguage;
     if (json.languages != undefined) languages = json.languages;
     if (json.emptyFallback != undefined) emptyFallback = json.emptyFallback;
+    if (json.rootType != undefined) rootType = json.rootType;
   }
 
   if (!fs.existsSync(destPath)) fs.mkdirSync(destPath);
@@ -198,7 +201,7 @@ function addHelper(accumulator: AddHelperAccumulator): void {
     } else die('Invalid JSON');
   });
 
-  if (name == '') name = 'Root';
+  if (name == '') name = rootType;
 
   typesBuffer.write(`type alias ${name} =\n    { `);
   typesBuffer.write(record.join('\n    , '));
@@ -260,7 +263,8 @@ type AddValueAccumulator = {
 
 function addValue(accumulator: AddValueAccumulator): void {
   const { buffer, data } = accumulator;
-  let { name } = accumulator;
+  const { name } = accumulator;
+  const rootedName = name == '' ? rootType : name;
 
   const record: string[] = [];
 
@@ -277,7 +281,7 @@ function addValue(accumulator: AddValueAccumulator): void {
         emptyFallback !== accumulator.moduleName
       ) {
         record.push(
-          `${fieldKey} = EmptyFallback.${asFieldName(name)}.${fieldKey}`,
+          `${fieldKey} = EmptyFallback.${asFieldName(rootedName)}.${fieldKey}`,
         );
       } else if (subEntries == null) {
         record.push(`${fieldKey} = "${value}"`);
@@ -303,11 +307,9 @@ function addValue(accumulator: AddValueAccumulator): void {
     } else die('Invalid JSON');
   });
 
-  if (name == '') name = 'Root';
+  const fieldName = asFieldName(rootedName);
 
-  const fieldName = asFieldName(name);
-
-  buffer.write(`${fieldName} : ${name}\n${fieldName} =\n    {\n`);
+  buffer.write(`${fieldName} : ${rootedName}\n${fieldName} =\n    {\n`);
   buffer.write(record.join('\n    , '));
   buffer.write('\n    }\n');
 }
