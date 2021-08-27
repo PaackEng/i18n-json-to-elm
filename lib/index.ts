@@ -243,13 +243,14 @@ function buildLang(sourceFileName: string, data: JSON): boolean {
     buffer.write(`import ${moduleNamespace}.${emptyFallback} as EmptyFallback\n`);
   }
 
-  addValue({ name: '', data, buffer });
+  addValue({ moduleName, name: '', data, buffer });
 
   buffer.end();
   return true;
 }
 
 type AddValueAccumulator = {
+  moduleName: string
   name: string;
   data: JSON;
   buffer: Writable;
@@ -268,7 +269,7 @@ function addValue(accumulator: AddValueAccumulator): void {
       die('Unexpected array in JSON');
     } else if (typeof value == 'string') {
       const subEntries = value.match(subEntryRegex);
-      if (value == '' && emptyFallback && emptyFallback !== moduleName) {
+      if (value == '' && emptyFallback && emptyFallback !== accumulator.moduleName) {
         record.push(`${fieldKey} = EmptyFallback.${asFieldName(name)}.${fieldKey}`);
       } else if (subEntries == null) {
         record.push(`${fieldKey} = "${value}"`);
@@ -285,7 +286,7 @@ function addValue(accumulator: AddValueAccumulator): void {
     } else if (value !== null && typeof value == 'object') {
       const newRecord = name + capitalize(key);
       record.push(`${fieldKey} = ${asFieldName(newRecord)}`);
-      addValue({ name: newRecord, data: value, buffer });
+      addValue({ moduleName: accumulator.moduleName, name: newRecord, data: value, buffer });
     } else die('Invalid JSON');
   });
 
