@@ -21,7 +21,7 @@
   },
   "homepage": "https://github.com/PaackEng/i18n-json-to-elm#readme",
   "dependencies": {
-    "elm-format": "^0.8.3"
+    "elm-format": "^0.8.6"
   },
   "devDependencies": {
     "@types/node": "^16.4.14",
